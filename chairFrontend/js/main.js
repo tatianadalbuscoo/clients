@@ -3,9 +3,6 @@
 // =====================
 
 
-// Import functions responsible for updating the chair's visualization and posture status display
-const { updateChairVisualization, updatePostureStatus } = require('./chair');
-
 // Selected chair ID
 let selectedChairId = null;
 
@@ -96,16 +93,6 @@ function loadChairIds() {
 
             // Add a default disabled <option> prompting the user to select a chair
             select.innerHTML = '<option value="" disabled selected>Select a chair</option>';
-
-            // If no chair IDs are returned, show a message in the dropdown
-            if (!data.ids || data.ids.length === 0) {
-                const option = document.createElement('option');
-                option.value = '';
-                option.textContent = 'No chairs available';
-                option.disabled = true;
-                select.appendChild(option);
-                return;
-            }
 
             // For each chair ID, create and append an <option> element
             data.ids.forEach(id => {
@@ -214,11 +201,19 @@ function updatePostureFeedback(status, source = 'sensors') {
 }
 
 
-// Export functions so they can be tested
-module.exports = {
-    updatePostureFeedback,
-    updateChairData
-};
+// Export functions for Jest
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    module.exports = {
+        updatePostureFeedback,
+        updateChairData
+    };
+}
+
+// Attach to window for browser usage (e.g. from other scripts)
+if (typeof window !== 'undefined') {
+    window.updatePostureFeedback = updatePostureFeedback;
+    window.updateChairData = updateChairData;
+}
 
 
 // Set default date filters to last 7 days and load history data

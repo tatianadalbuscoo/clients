@@ -2,7 +2,6 @@
 // PoseNet integration for posture tracking
 // =====================
 
-
 let video;                          // HTML video element for webcam
 let poseNet;                        // PoseNet model instance
 let pose;                           // Current detected pose
@@ -343,4 +342,20 @@ function sendPosnetDataToServer(pose) {
             });
     }
 }
+
+
+// Export functions for Jest
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    module.exports = {
+        stabilizePosture,
+        sendPosnetDataToServer
+    };
+}
+
+// Attach functions to the window object for browser usage
+if (typeof window !== 'undefined') {
+    window.stabilizePosture = stabilizePosture;
+    window.sendPosnetDataToServer = sendPosnetDataToServer;
+}
+
 

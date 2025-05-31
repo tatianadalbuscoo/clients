@@ -80,9 +80,17 @@ function updatePostureStatus(status) {
 }
 
 
-// Export functions so they can be tested
-module.exports = {
-    updateChairVisualization,
-    updatePostureStatus,
-};
+// Export functions for Jest
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    module.exports = {
+        updateChairVisualization,
+        updatePostureStatus,
+    };
+}
+
+// Attach functions to the window object for browser usage
+if (typeof window !== 'undefined') {
+    window.updateChairVisualization = updateChairVisualization;
+    window.updatePostureStatus = updatePostureStatus;
+}
 
