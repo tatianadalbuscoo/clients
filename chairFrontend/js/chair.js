@@ -79,3 +79,10 @@ function updatePostureStatus(status) {
     updatePostureClass(statusElement, status);
 }
 
+
+// Export functions so they can be tested
+module.exports = {
+    updateChairVisualization,
+    updatePostureStatus,
+};
+
