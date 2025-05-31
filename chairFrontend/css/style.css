@@ -278,15 +278,7 @@ footer {
     text-align: left;
 }
 
-#posenet-container {
-    width: 640px;
-    height: 480px;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-    border: 2px solid var(--terra-cotta);
-}
+
 
 .video-controls {
     margin-top: 1rem;
@@ -299,15 +291,6 @@ footer {
     height: 480px; /* match video height */
 }
 
-.posture-box {
-    border: 2px solid var(--terra-cotta);
-    border-radius: 8px;
-    padding: 1rem;
-    background-color: #fff9f6;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    max-width: 280px;
-}
-
 .video-block h2.section-heading {
     font-size: 1.8rem;
     margin-bottom: 1rem;
@@ -315,8 +298,6 @@ footer {
     border-bottom: 1px solid var(--terra-cotta);
     padding-bottom: 0.5rem;
 }
-
-
 
 .posture-box {
     transition: background-color 0.8s ease-in-out, border-color 0.8s ease-in-out;

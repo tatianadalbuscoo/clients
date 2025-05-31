@@ -2,56 +2,55 @@
 // PoseNet integration for posture tracking
 // =====================
 
-// DOM elements and states
-let video;                  // HTML video element for webcam
-let poseNet;                // PoseNet model instance
-let pose;                   // Current detected pose
-let isRunning = false;      // Tracks if camera/pose detection is active
-let videoStream = null;     // Stores the webcam stream
-let socket;                 // Socket connection to the server
+
+let video;                          // HTML video element for webcam
+let poseNet;                        // PoseNet model instance
+let pose;                           // Current detected pose
+let isRunning = false;     // Indicates if the camera is currently active
+let videoStream = null;        // Webcam media stream
+let socket;                         // Socket connection to the server
 
 // Posture analysis tracking
-let lastPosture = null;             // Last detected posture
-let postureChangeTimer = null;     // Timer to stabilize posture changes
-let postureChangeTimestamp = Date.now(); // Timestamp of last posture change
-const MIN_DURATION = 2500;         // Minimum time (ms) posture must be consistent to count
+let lastPosture = null;             // Last posture that was detected and shown
+let postureChangeTimer = null;      // Timer used to confirm consistent posture
+const MIN_DURATION = 2500;       // Time (ms) a posture must persist before accepting it
+
 
 /**
- * Initializes the PoseNet setup:
+ * Initializes PoseNet setup:
  * - Stores the socket connection
- * - Sets up camera toggle button
+ * - Attaches event listener to the toggle camera button
+ *
+ * parameters: socketConnection
+ * return: void
  */
 function initPoseNet(socketConnection) {
     socket = socketConnection;
 
     const cameraButton = document.getElementById('toggle-camera');
     cameraButton.addEventListener('click', toggleCamera);
-
-    // Optional: Listen to posture updates from server
-    /*
-    socket.on('postureUpdate', (data) => {
-        if (data.hasPoseData && data.postureStatus) {
-            updatePostureStatus(data.postureStatus);
-        }
-    });
-    */
 }
 
+
 /**
- * Toggles camera on/off and starts or stops pose detection.
+ * Toggles the webcam and PoseNet detection on/off.
+ *
+ * parameters: none
+ * return: void
  */
 async function toggleCamera() {
-    console.log('Toggling camera...');
     const cameraButton = document.getElementById('toggle-camera');
 
     if (!isRunning) {
+
         // Start camera and pose detection
         cameraButton.textContent = 'Starting...';
         await setupPoseNet();
         cameraButton.textContent = 'Stop Camera';
         isRunning = true;
     } else {
-        // Stop camera and clean up resources
+
+        // Stop camera and release resources
         if (videoStream) {
             videoStream.getTracks().forEach(track => track.stop());
             videoStream = null;
@@ -63,8 +62,12 @@ async function toggleCamera() {
     }
 }
 
+
 /**
- * Sets up webcam, canvas, and PoseNet model for pose detection.
+ * Sets up the webcam, canvas, and loads the PoseNet model.
+ *
+ * parameters: none
+ * return: Promise<void>
  */
 async function setupPoseNet() {
     try {
@@ -77,13 +80,13 @@ async function setupPoseNet() {
         canvas.width = 640;
         canvas.height = 480;
 
-        // Hide video visually (used only for input)
+        // Hide video from UI (used only as input to PoseNet)
         video.style.display = "block";
         video.style.position = "absolute";
         video.style.opacity = "0.01";
         video.style.zIndex = "-1";
 
-        // Request camera stream
+        // Request access to the camera
         videoStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 width: { ideal: 640 },
@@ -94,6 +97,7 @@ async function setupPoseNet() {
         });
         video.srcObject = videoStream;
 
+        // Start processing once video is ready
         return new Promise((resolve, reject) => {
             video.onloadedmetadata = () => {
                 console.log('Video metadata loaded');
@@ -104,7 +108,7 @@ async function setupPoseNet() {
                     loadPoseNetModel().then(net => {
                         poseNet = net;
 
-                        // Begin detection loop after a short delay
+                        // Begin pose detection loop
                         setTimeout(() => {
                             detectPose(video, canvas, ctx);
                         }, 1000);
@@ -122,8 +126,12 @@ async function setupPoseNet() {
     }
 }
 
+
 /**
- * Loads the PoseNet model with specified configuration.
+ * Loads the PoseNet model with configuration.
+ *
+ * parameters: none
+ * return: PoseNet model instance
  */
 async function loadPoseNetModel() {
     return await posenet.load({
@@ -134,16 +142,23 @@ async function loadPoseNetModel() {
     });
 }
 
+
 /**
- * Main pose detection loop:
- * - Estimates pose from video
- * - Draws pose on canvas
- * - Sends data for posture analysis
+ * Main loop for detecting pose from webcam video.
+ * - Draws video and detected pose on canvas
+ * - Sends pose to server for analysis
+ *
+ * parameters: video (HTMLVideoElement), canvas (HTMLCanvasElement), ctx (CanvasRenderingContext2D)
+ * return: void
  */
 async function detectPose(video, canvas, ctx) {
+
+    // Exit early if the camera is not running or PoseNet is not loaded
     if (!isRunning || !poseNet) return;
 
     try {
+
+        // Estimate one or more poses from the video input using PoseNet
         const poses = await poseNet.estimateMultiplePoses(video, {
             flipHorizontal: true,
             maxDetections: 1,
@@ -151,18 +166,19 @@ async function detectPose(video, canvas, ctx) {
             nmsRadius: 20
         });
 
+        // Clear canvas and draw background
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#f0f0f0';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Mirror and draw video feed
+        // Mirror video on canvas
         if (video.readyState >= 2) {
             ctx.save();
             ctx.scale(-1, 1);
             ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
             ctx.restore();
 
-
+            // Show a hint if no pose is found
             if (!poses || poses.length === 0) {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fillRect(canvas.width/2 - 140, canvas.height/2 - 15, 280, 30);
@@ -170,22 +186,22 @@ async function detectPose(video, canvas, ctx) {
                 ctx.fillText('Looking for you... Stand in view of camera', canvas.width/2, canvas.height/2);
             }
         } else {
+
+            // Show loading message while camera is initializing
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
             ctx.fillRect(canvas.width/2 - 100, canvas.height/2 - 15, 200, 30);
             ctx.fillStyle = 'white';
             ctx.fillText('Camera starting...', canvas.width/2, canvas.height/2);
         }
 
-        // If pose found, analyze and draw it
+        // If a pose is found, draw and send it
         if (poses.length > 0) {
             pose = poses[0];
             drawPose(pose, ctx);
             sendPosnetDataToServer(pose);
         }
 
-
-
-        // Continue loop
+        // Continue the detection loop
         requestAnimationFrame(() => detectPose(video, canvas, ctx));
     } catch (error) {
         console.error('Error detecting pose:', error);
@@ -193,8 +209,12 @@ async function detectPose(video, canvas, ctx) {
     }
 }
 
+
 /**
- * Draws keypoints and skeleton on the canvas for visualization.
+ * Draws keypoints and skeleton on canvas.
+ *
+ * parameters: pose (Pose), ctx (CanvasRenderingContext2D)
+ * return: void
  */
 function drawPose(pose, ctx) {
     if (!pose) return;
@@ -209,7 +229,7 @@ function drawPose(pose, ctx) {
         }
     });
 
-    // Define and draw skeleton (keypoint connections)
+    // Draw skeleton lines between keypoints
     const skeleton = [
         ['nose', 'leftEye'], ['leftEye', 'leftEar'], ['nose', 'rightEye'],
         ['rightEye', 'rightEar'], ['nose', 'leftShoulder'],
@@ -219,42 +239,68 @@ function drawPose(pose, ctx) {
     ctx.strokeStyle = 'aqua';
     ctx.lineWidth = 2;
 
+    // Loop through each pair of connected body parts defined in "skeleton"
     skeleton.forEach(pair => {
+
+        // Get the first and second keypoint in the pair (e.g., 'nose' and 'leftEye')
         const partA = getKeypoint(pose.keypoints, pair[0]);
         const partB = getKeypoint(pose.keypoints, pair[1]);
 
+        // Only draw the line if both keypoints exist and have a high enough confidence score
         if (partA && partB && partA.score > 0.5 && partB.score > 0.5) {
-            ctx.beginPath();
-            ctx.moveTo(partA.position.x, partA.position.y);
-            ctx.lineTo(partB.position.x, partB.position.y);
-            ctx.stroke();
+            ctx.beginPath();                                     // Start a new path
+            ctx.moveTo(partA.position.x, partA.position.y);      // Move to the first keypoint
+            ctx.lineTo(partB.position.x, partB.position.y);      // Draw a line to the second keypoint
+            ctx.stroke();                                        // Actually draw the line on the canvas
         }
     });
 }
 
+
 /**
- * Utility to find a keypoint by name.
+ * Finds a keypoint by name.
+ *
+ * parameters: keypoints (array), name (string)
+ * return: object | undefined
  */
 function getKeypoint(keypoints, name) {
     return keypoints.find(keypoint => keypoint.part === name);
 }
 
+
 /**
- * Ensures that a posture is held for a minimum time before updating the UI.
+ * Ensures that a posture is consistent for a minimum duration before applying it.
+ *
+ * parameters: newStatus (string)
+ * return: void
  */
 function stabilizePosture(newStatus) {
+
+    // If the new posture is the same as the last confirmed one
     if (newStatus === lastPosture) {
+
+        // Cancel any ongoing timer (no need to wait anymore)
         if (postureChangeTimer) {
             clearTimeout(postureChangeTimer);
             postureChangeTimer = null;
         }
-        updatePostureStatus(newStatus, 'posenet');  // ← AGGIUNTO
+
+        // Immediately update the UI with the same posture again (in case of refresh)
+        updatePostureStatus(newStatus, 'posenet');
     } else {
+        // If posture has changed, wait MIN_DURATION ms before applying it
+
+        // Clear any previously running timer
         if (postureChangeTimer) clearTimeout(postureChangeTimer);
 
+        // Start a new timer: if posture stays the same for MIN_DURATION, apply it
         postureChangeTimer = setTimeout(() => {
+
+            // Save new posture as confirmed
             lastPosture = newStatus;
-            updatePostureStatus(newStatus, 'posenet');  // ← AGGIUNTO
+            updatePostureStatus(newStatus, 'posenet'); // Update UI
+
+            // Clear the timer reference
             postureChangeTimer = null;
         }, MIN_DURATION);
     }
@@ -262,98 +308,31 @@ function stabilizePosture(newStatus) {
 
 
 /**
- * Analyzes pose keypoints to determine posture quality and sends data to server.
+ * Sends the current PoseNet keypoints to the server via HTTP POST.
+ * Limits sending to once per second to avoid flooding the server.
+ *
+ * parameters: pose (object containing keypoints)
+ * return: void
  */
-/*function sendPosnetDataToServer(pose) {
-    if (!pose) return;
-
-    if (!sendPosnetDataToServer.lastSent || (Date.now() - sendPosnetDataToServer.lastSent) > 3000) {
-        sendPosnetDataToServer.lastSent = Date.now();
-
-        const keypoints = pose.keypoints;
-        const leftShoulder = keypoints.find(p => p.part === 'leftShoulder');
-        const rightShoulder = keypoints.find(p => p.part === 'rightShoulder');
-        const nose = keypoints.find(p => p.part === 'nose');
-
-        let postureStatus = 'not_sitting';
-        let verticalDist = null;
-        let shoulderDifference = null;
-
-        console.log("🧠 Pose detected:");
-        console.log(" - Nose:", nose);
-        console.log(" - Left shoulder:", leftShoulder);
-        console.log(" - Right shoulder:", rightShoulder);
-        console.log(" - AAAAAAAAAAAAAAAAAAAAAAA", postureStatus);
-
-
-        if (leftShoulder && rightShoulder && nose &&
-            leftShoulder.score > 0.3 && rightShoulder.score > 0.3 && nose.score > 0.3) {
-        //if (nose && nose.score > 0.5) {
-            const centerShoulders = {
-                x: (leftShoulder.position.x + rightShoulder.position.x) / 2,
-                y: (leftShoulder.position.y + rightShoulder.position.y) / 2
-            };
-
-            verticalDist = nose.position.y - centerShoulders.y;
-            shoulderDifference = Math.abs(leftShoulder.position.y - rightShoulder.position.y);
-
-
-            if (shoulderDifference > 50) {
-                postureStatus = 'poor';
-            } else {
-                if (verticalDist > 80) {
-                    postureStatus = 'leaning_forward';
-                } else if (verticalDist < -300) {
-                    postureStatus = 'poor';
-                } else {
-                    postureStatus = 'good';
-                }
-            }
-
-            stabilizePosture(postureStatus);
-
-            console.log('[DEBUG] shoulderDifference:', shoulderDifference.toFixed(2));
-            console.log('[DEBUG] verticalDist:', verticalDist.toFixed(2));
-            console.log('[DEBUG] postureStatus selected:', postureStatus);
-
-
-        }
-
-        // Send posture and pose data to server
-        fetch(`${CONFIG.SERVER.URL}/posenet`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chairId: selectedChairId || 'CHAIR01',
-                source: 'posenet',
-                keypoints: pose.keypoints,
-                postureAnalysis: {
-                    verticalDistance: verticalDist ? verticalDist.toFixed(2) : null,
-                    shoulderDifference: shoulderDifference ? shoulderDifference.toFixed(2) : null,
-                    postureStatus: postureStatus
-                }
-            })
-        }).then(() => {
-            console.log("Pose data sent to server");
-        }).catch(error => {
-            console.error('Error sending pose data:', error);
-        });
-    }
-}*/
-
 function sendPosnetDataToServer(pose) {
+
+    // Exit if no pose is provided
     if (!pose) return;
 
+    // Allow sending only once every 1000 ms (1 second)
     if (!sendPosnetDataToServer.lastSent || (Date.now() - sendPosnetDataToServer.lastSent) > 1000) {
+
+        // Update timestamp of last sent pose
         sendPosnetDataToServer.lastSent = Date.now();
 
+        // Send POST request to the server with pose keypoints
         fetch(`${CONFIG.SERVER.URL}/posenet`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chairId: selectedChairId || 'CHAIR01',
-                source: 'posenet',               // ✅ questo rimane!
-                keypoints: pose.keypoints        // ✅ niente calcoli qui
+                source: 'posenet', // identify data source
+                keypoints: pose.keypoints
             })
         })
             .then(() => {

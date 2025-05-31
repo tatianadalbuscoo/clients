@@ -1,24 +1,44 @@
+// =====================
 // History data handling and visualization
+// =====================
+/*
+
+// Chart
 let historyChart;
 
-// Initialize posture history chart and filter functionality
+
+/**
+ * Initializes the posture history module.
+ * Sets up the chart and attaches event listeners for filtering.
+ *
+ * parameters: none
+ * return: void
+
 function initHistory() {
 
     // Set up chart for history visualization
     setupHistoryChart();
-    
+
     // Set up event listeners for history filtering (When the "Filter" button is pressed)
     document.getElementById('filter-btn').addEventListener('click', () => {
         loadHistoryData();
     });
 }
 
-// Create and configure the posture history line chart using Chart.js
+
+/**
+ * Creates and configures the Chart.js line chart for posture history.
+ *
+ * parameters: none
+ * return: void
+
 function setupHistoryChart() {
+
     const ctx = document.getElementById('history-chart').getContext('2d');
-    
+
+    // Create a new Chart instance
     historyChart = new Chart(ctx, {
-        type: 'line', // Line chart to show posture trend over time
+        type: 'line', // Use a line chart to visualize posture over time
         data: {
             labels: [],
             datasets: [
@@ -34,8 +54,8 @@ function setupHistoryChart() {
             ]
         },
         options: {
-            responsive: true,   // Adapt to container size
-            maintainAspectRatio: false,
+            responsive: true,   // Chart adjusts to container size
+            maintainAspectRatio: false, // Allows flexible height
             plugins: {
                 legend: {
                     labels: {
@@ -46,6 +66,8 @@ function setupHistoryChart() {
                 },
                 tooltip: {
                     callbacks: {
+
+                        // Customize tooltip to include posture status label
                         label: function(context) {
                             let label = context.dataset.label || '';
                             if (label) {
@@ -53,8 +75,8 @@ function setupHistoryChart() {
                             }
                             if (context.parsed.y !== null) {
                                 label += context.parsed.y;
-                                
-                                // Add posture status
+
+                                // Add posture status description in tooltip
                                 const status = context.dataset.postureStatus?.[context.dataIndex];
                                 if (status) {
                                     label += ` (${formatPostureStatus(status)})`;
@@ -97,85 +119,93 @@ function setupHistoryChart() {
     });
 }
 
-// Update the posture history chart with new filtered data
-function updateHistoryChart(historyData) {
 
-    // Ensure the chart and data are available and valid
+/**
+ * Updates the HTML table showing historical posture data.
+ *
+ * parameters: historyData (array of posture records)
+ * return: void
+
+function updateHistoryChart(historyData) {
     if (!historyChart || !historyData || !Array.isArray(historyData)) return;
-    
-    // Initialize arrays to hold chart data
+
     const labels = [];
     const values = [];
     const statuses = [];
-    
-    // Sort data by timestamp (oldest first)
-    const sortedData = [...historyData].sort((a, b) => 
-        new Date(a.timestamp) - new Date(b.timestamp)
-    );
-    
-    sortedData.forEach(record => {
-        // Format the timestamp for display
-        labels.push(formatDate(record.timestamp));
-        
-        // Convert posture status to a numerical value for the chart
-        let value = 0;
-        switch (record.postureStatus) {
-            case 'good':
-                value = 90;
-                break;
-            case 'leaning_forward':
-                value = 60;
-                break;
-            case 'poor':
-                value = 30;
-                break;
-            case 'not_sitting':
-                value = 10;
-                break;
-            default:
-                value = 0;
+
+    // Raggruppa i record per ORA (es: "2025-05-30 14")
+    const groupedByHour = {};
+
+    historyData.forEach(record => {
+        const date = new Date(record.timestamp);
+        const dateKey = date.getFullYear() + '-' +
+            String(date.getMonth() + 1).padStart(2, '0') + '-' +
+            String(date.getDate()).padStart(2, '0') + ' ' +
+            String(date.getHours()).padStart(2, '0') + ':00';
+
+        if (!groupedByHour[dateKey]) {
+            groupedByHour[dateKey] = [];
         }
-        
-        values.push(value);
-        statuses.push(record.postureStatus);
+
+        groupedByHour[dateKey].push(record.postureStatus);
     });
-    
-    // Update chart data
+
+    // Per ogni ora, calcola la media della postura
+    for (const [hour, statusList] of Object.entries(groupedByHour)) {
+        let sum = 0;
+        let count = 0;
+
+        statusList.forEach(status => {
+            switch (status) {
+                case 'good': sum += 90; break;
+                case 'poor': sum += 30; break;
+                case 'not_sitting': sum += 10; break;
+                default: sum += 0;
+            }
+            count++;
+        });
+
+        labels.push(hour);  // esempio: "2025-05-30 14:00"
+        values.push(Math.round(sum / count));
+        statuses.push('avg');
+    }
+
     historyChart.data.labels = labels;
     historyChart.data.datasets[0].data = values;
     historyChart.data.datasets[0].postureStatus = statuses;
-    
+
     historyChart.update();
 }
+
 
 // Updates the posture history table with sorted data,
 // formatting each row with timestamp, posture status, and sensor values
 function updateHistoryTable(historyData) {
     if (!historyData || !Array.isArray(historyData)) return;
-    
+
     const tableBody = document.getElementById('history-data');
     if (!tableBody) return;
-    
+
     // Clear existing rows
     tableBody.innerHTML = '';
-    
+
     // Sort data by timestamp (newest first for the table)
-    const sortedData = [...historyData].sort((a, b) => 
+    const sortedData = [...historyData].sort((a, b) =>
         new Date(b.timestamp) - new Date(a.timestamp)
     );
-    
+
     // Add data rows
     sortedData.forEach(record => {
         const row = document.createElement('tr');
-        
+
         // Date/Time cell
         const timeCell = document.createElement('td');
         timeCell.textContent = formatDate(record.timestamp);
         row.appendChild(timeCell);
-        
+
         // Posture Status cell
         const statusCell = document.createElement('td');
-        
+
         // Create a status indicator span
         const statusIndicator = document.createElement('span');
         statusIndicator.textContent = formatPostureStatus(record.postureStatus);
@@ -183,7 +213,7 @@ function updateHistoryTable(historyData) {
         updatePostureClass(statusIndicator, record.postureStatus);
         statusCell.appendChild(statusIndicator);
         row.appendChild(statusCell);
-        
+
         // Sensor Data cell
         const sensorCell = document.createElement('td');
         if (record.sensors && Array.isArray(record.sensors)) {
@@ -193,10 +223,10 @@ function updateHistoryTable(historyData) {
             sensorCell.textContent = 'N/A';
         }
         row.appendChild(sensorCell);
-        
+
         tableBody.appendChild(row);
     });
-    
+
     // Show message if no data
     if (sortedData.length === 0) {
         const emptyRow = document.createElement('tr');
@@ -210,20 +240,37 @@ function updateHistoryTable(historyData) {
     }
 }
 
-// Show posture status with a nice label
+/**
+ * Converts posture status strings into friendly labels for display.
+ *
+ * parameters: status (string code like 'good', 'poor', etc.)
+ * return: string (formatted label)
+
 function formatPostureStatus(status) {
     switch (status) {
         case 'good':
             return 'Good Posture';
         case 'poor':
             return 'Poor Posture';
-        case 'leaning_forward':
-            return 'Leaning Forward';
         case 'not_sitting':
             return 'Not Sitting';
-        case 'posenet_only':
-            return 'PoseNet Analysis';
         default:
             return 'Unknown';
     }
 }
+/**
+ * Applies a CSS class to the status element based on posture.
+ *
+ * parameters: element (HTML element), postureStatus (string)
+ * return: void
+
+function updatePostureClass(element, postureStatus) {
+    if (!element) return;
+
+    // Rimuove classi precedenti
+    element.classList.remove('good', 'poor', 'leaning_forward', 'not_sitting');
+
+    // Aggiunge la nuova classe in base allo stato
+    element.classList.add(postureStatus);
+}
+*/

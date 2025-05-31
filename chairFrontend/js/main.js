@@ -1,124 +1,218 @@
+// =====================
 // Main application script
-// Initializes app modules and connects to server once the page is fully loaded
+// =====================
+
+// Selected chair ID
 let selectedChairId = null;
 
 
-
-
-
+/**
+ * Main entry point - Initializes the main UI logic once the DOM is fully loaded.
+ *
+ * - Loads available chair IDs.
+ * - Handles WebSocket connection when the "connect" button is clicked.
+ * - Starts PoseNet and listens for real-time updates based on the selected chair.
+ */
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Socket.IO
-    //const socket = io('http://172.20.10.2:3000');
 
-    // Set up Socket.IO event listeners
-    socket.on('connect', () => {
-        console.log('Connected to server');
-    });
+    // Fetch chair IDs from the server and populate the dropdown
+    loadChairIds();
+    //setupDateFilters();
 
-    // Initialize modules
-    initChair(socket);
-    initPoseNet(socket);
-    initHistory();
-
-
-    // Set current date in the date filters
-    setupDateFilters();
-});
-
-// Carica gli ID disponibili dal server e popola il <select>
-function loadChairIds() {
-    let s = `${CONFIG.SERVER.URL}/api/chairids`;
-    console.log(s);
-  fetch(`${CONFIG.SERVER.URL}/api/chairids`) // Use full URL instead of relative path
-    .then(res => res.json())
-    .then(data => {
-      console.log('Received chair IDs:', data);
-
-      const select = document.getElementById('chair-select');
-      select.innerHTML = '<option disabled selected>Select a chair</option>';
-
-      if (!data.ids || data.ids.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No chairs available';
-        option.disabled = true;
-        select.appendChild(option);
-        return;
-      }
-
-      data.ids.forEach(id => {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = id;
-        select.appendChild(option);
-      });
-    })
-    .catch(err => {
-      console.error('Error fetching chair IDs:', err);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadChairIds(); // carica gli ID al caricamento
-
+    // Event listener for the "Connect" button
     const connectBtn = document.getElementById('connect-btn');
     connectBtn.addEventListener('click', () => {
         const select = document.getElementById('chair-select');
         selectedChairId = select.value;
 
+        // Require a chair selection before connecting
         if (!selectedChairId) {
             alert('Please select a chair!');
             return;
         }
 
-        // Avvia connessione
-        socket = io(CONFIG.SERVER.URL);
+        // Prevent multiple socket connections
+        if (window.socket && window.socket.connected) {
+            console.log('Already connected');   // Debug
+            return;
+        }
 
+        // Open socket connection to server
+        const socket = io(CONFIG.SERVER.URL);
+        window.socket = socket;
+
+        // Show successful connection status
         socket.on('connect', () => {
-            console.log('Connected to server');
-            document.getElementById('connection-status').textContent = `Connected to ${selectedChairId}`;
+            console.log('Connected to server'); // Debug
+            document.getElementById('connection-status').textContent =
+                `Connected to ${selectedChairId}`;
         });
 
-        // Inizializzazioni DOPO connessione
+        // Initialize PoseNet
         initPoseNet(socket);
-        initHistory();
-        setupDateFilters();
+        //initHistory();
 
+        // Listen for sensor data
         socket.on('chairData', (data) => {
             if (data.chairId !== selectedChairId) return;
             updateChairData(data);
         });
 
+        // Listen for posture updates (from PoseNet or sensors)
         socket.on('postureUpdate', (data) => {
             if (data.chairId !== selectedChairId) return;
             updatePostureStatus(data.postureStatus, data.source === 'posenet' ? 'posenet' : 'sensors');
         });
     });
-
-
 });
 
 
-    // Listener per feedback da PoseNetsocket.on('postureUpdate', (data) => {
-      socket.on('postureUpdate', (data) => {
-          //loadHistoryData();
-          if (data.chairId !== selectedChairId) return;
+/**
+ * Fetches available chair IDs from the server and populates the <select> dropdown.
+ *
+ * - Makes a GET request to /api/chairids
+ * - If chair IDs are returned, adds them as <option> elements in the dropdown
+ * - Adds a default "Select a chair" disabled option
+ *
+ *  parameters: none
+ *  return: void
+ */
+function loadChairIds() {
 
-          if (data.source === 'posenet') {
-              console.log('Posture update (PoseNet):', data);
-              updatePostureStatus(data.postureStatus, 'posenet');
-          } else {
-              console.log('Posture update (Sensor):', data);
-              updatePostureStatus(data.postureStatus, 'sensors');
-          }
-      });
+    // Construct the API URL for fetching chair IDs
+    let s = `${CONFIG.SERVER.URL}/api/chairids`;
+
+    // Fetch chair IDs from the server
+    fetch(`${CONFIG.SERVER.URL}/api/chairids`)
+        .then(res => res.json())
+        .then(data => {
+            console.log('Received chair IDs:', data);
+
+            const select = document.getElementById('chair-select');
+
+            // Add a default disabled <option> prompting the user to select a chair
+            select.innerHTML = '<option value="" disabled selected>Select a chair</option>';
+
+            // If no chair IDs are returned, show a message in the dropdown
+            if (!data.ids || data.ids.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No chairs available';
+                option.disabled = true;
+                select.appendChild(option);
+                return;
+            }
+
+            // For each chair ID, create and append an <option> element
+            data.ids.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = id;
+                select.appendChild(option);
+            });
+        })
+        .catch(err => {
+
+            // Log any error that occurred during the fetch
+            console.error('Error fetching chair IDs:', err);
+        });
+}
 
 
+/**
+ * Updates the UI with new sensor and posture data received from the selected chair.
+ * parameters: data (object containing sensor and posture information)
+ * return: void
+ */
+function updateChairData(data) {
+
+    // Make sure the data object exists and contains sensor information
+    if (!data || !data.sensors) {
+        console.error('Invalid chair data received:', data);
+        return;
+    }
+
+    // Update the sensor visualization on the UI
+    updateChairVisualization(data.sensors);
+
+    // If posture data is present and NOT from PoseNet, update posture status
+    if (data.source !== 'posenet' && data.postureStatus) {
+        updatePostureStatus(data.postureStatus, 'sensors');
+    }
+
+    // Update the status area with a timestamp of the last update
+    const timestamp = new Date().toLocaleTimeString();
+    const statusElement = document.getElementById('connection-status');
+    if (statusElement) {
+        statusElement.textContent = `Connected to ${selectedChairId} (Last update: ${timestamp})`;
+    }
+}
+
+
+/**
+ * Updates the posture status display based on the given posture type and data source.
+ * parameters: status (string), source (string: 'sensors' or 'posenet', default = 'sensors')
+ * return: void
+ */
+function updatePostureStatus(status, source = 'sensors') {
+
+    // Default messages in case the posture is unrecognized
+    let statusText = 'Unknown';
+    let adviceText = 'Posture not recognized.';
+
+    console.log('Received postureStatus =', status); // Debug
+
+    // Determine posture label and advice based on the status code
+    switch (status) {
+        case 'good':
+            statusText = 'Good Posture';
+            adviceText = 'Great job! Keep your back straight and relaxed, with your shoulders aligned.';
+            break;
+        case 'poor':
+            statusText = 'Poor Posture';
+            adviceText = 'Your shoulders appear unbalanced. Straighten your back and distribute your weight evenly.';
+            break;
+        case 'not_sitting':
+            statusText = 'Not Sitting';
+            adviceText = 'No sitting posture detected. Make sure you’re seated and visible to the camera.';
+            break;
+    }
+
+    if (source === 'posenet') {
+
+        // If data comes from PoseNet → update the feedback panel near the camera view
+        const statusElement = document.getElementById('feedback-status');
+        const descriptionElement = document.getElementById('feedback-description');
+        const panel = document.getElementById('posture-feedback');
+
+        // Update panel class and text content
+        if (panel) panel.className = `posture-box ${status}`;
+        if (statusElement) statusElement.textContent = statusText;
+        if (descriptionElement) descriptionElement.textContent = adviceText;
+
+        console.log('[PoseNet] Updated feedback panel'); // Debug
+
+    } else {
+
+        // If data comes from sensors → update the main posture indicator
+        const indicator = document.querySelector('#posture-status .indicator');
+        const panel = document.getElementById('posture-status');
+
+        if (indicator) {
+
+            // Reset and apply the new posture class
+            indicator.classList.remove('good', 'poor', 'leaning_forward', 'not_sitting');
+            indicator.classList.add(status);
+            indicator.textContent = statusText;
+            console.log('[Sensors] Updated main status indicator'); // Debug
+        }
+    }
+}
 
 
 
 // Set default date filters to last 7 days and load history data
-function setupDateFilters() {
+/*function setupDateFilters() {
     const today = new Date();
     const fromDate = new Date();
 
@@ -133,75 +227,23 @@ function setupDateFilters() {
     document.getElementById('filter-btn').addEventListener('click', () => {
         loadHistoryData();
     });
-    
-}
+
+}*/
 
 // Loads history data based on selected date range
-function loadHistoryData() {
+/*function loadHistoryData() {
     const fromDate = document.getElementById('from-date').value;
     const toDate = document.getElementById('to-date').value;
 
     // Fetch data for the selected chair and date range
-    fetchHistory(selectedChairId || 'CHAIR01', fromDate, toDate);
+    //fetchHistory(selectedChairId || 'CHAIR01', fromDate, toDate);
 
-}
-function updateChairData(data) {
-    // Verifica che i dati contengano le informazioni necessarie
-    if (!data || !data.sensors) {
-      console.error('Invalid chair data received:', data);
-      return;
-    }
-
-    // Aggiorna la visualizzazione dei sensori
-    updateChairVisualization(data.sensors);
-
-    // Se i dati contengono anche informazioni sulla postura, aggiorna anche quella
-    // Se i dati contengono anche informazioni sulla postura, aggiorna solo se NON viene da PoseNet
-    if (data.source !== 'posenet' && data.postureStatus) {
-        updatePostureStatus(data.postureStatus, 'sensors');
-    }
-
-
-    // Aggiorna il timestamp dell'ultimo aggiornamento (opzionale)
-    const timestamp = new Date().toLocaleTimeString();
-    const statusElement = document.getElementById('connection-status');
-    if (statusElement) {
-      statusElement.textContent = `Connected to ${selectedChairId} (Last update: ${timestamp})`;
-    }
-  }
-
-// Fetches posture history data from the server and updates the chart/table
-/*function fetchHistory(chairId, from, to) {
-    const url = `http://d9b3-194-230-145-110.ngrok-free.app/api/history/${chairId}?from=${from}&to=${to}`;
-
-    fetch(url)
-        .then(response => {
-            console.log('Fetching history from:', url);
-            console.log(response)
-            return response.text()
-        })
-        .then(rawText => {
-            try {
-                console.log('Raw response:', rawText);
-                const data = JSON.parse(rawText);
-                console.log('History data ed:', data);
-                updateHistoryTable(data);
-                updateHistoryChart(data);
-            } catch (error) {
-
-                console.error('Error parsing history data:', error);
-                throw new Error('Invalid JSON format');
-            }
-
-            // Update the table and chart with the fetched data
-
-        })
-        .catch(error => {
-            console.error('Error fetching history:', error);
-        });
 }*/
+
+/*
+// Fetches posture history data from the server and updates the chart/table
 function fetchHistory(chairId, from, to) {
-   const url = `${CONFIG.SERVER.URL}/api/history/${chairId}?from=${from}&to=${to};`
+    const url = `${CONFIG.SERVER.URL}/api/history/${chairId}?from=${from}&to=${to}`;
 
     fetch(url)
         .then(response => {
@@ -210,77 +252,19 @@ function fetchHistory(chairId, from, to) {
         })
         .then(data => {
             console.log('Fetched data:', data);
-            updateHistoryTable(data);
-            updateHistoryChart(data);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                alert('No history data found for the selected period.');
+                return;
+            }
+
+            //updateHistoryTable(data);
+            //updateHistoryChart(data);
         })
         .catch(error => {
             console.error('Error fetching history:', error);
-        });
-}
-
-// Formats a date string into a readable format (e.g., "Apr 27, 2025, 14:30")
-function formatDate(dateString) {
-    const options = {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-}
-
-function updatePostureStatus(status, source = 'sensors') {
-    let statusText = 'Unknown';
-    let adviceText = 'Posture not recognized.';
-
-    console.log('[UI] Received postureStatus =', status);
-
-
-    switch (status) {
-        case 'good':
-            statusText = 'Good Posture';
-            adviceText = 'Great job! Keep your back straight and relaxed, with your shoulders aligned.';
-            break;
-        case 'poor':
-            statusText = 'Poor Posture';
-            adviceText = 'Your shoulders appear unbalanced. Straighten your back and distribute your weight evenly.';
-            break;
-        /*case 'leaning_forward':
-            statusText = 'Leaning Forward';
-            adviceText = 'Your head is too far forward. Pull your chin back and align your ears with your shoulders.';
-            break;*/
-        case 'not_sitting':
-            statusText = 'Not Sitting';
-            adviceText = 'No sitting posture detected. Make sure you’re seated and visible to the camera.';
-            break;
-
-    }
-
-    if (source === 'posenet') {
-        // Posture da PoseNet → aggiorna riquadro vicino al video
-        const statusElement = document.getElementById('feedback-status');
-        const descriptionElement = document.getElementById('feedback-description');
-        const panel = document.getElementById('posture-feedback');
-
-        if (panel) panel.className = `posture-box ${status}`;
-        if (statusElement) statusElement.textContent = statusText;
-        if (descriptionElement) descriptionElement.textContent = adviceText;
-
-        console.log('[PoseNet] Updated feedback panel');
-    } else {
-        // Postura dai sensori → aggiorna indicatore centrale
-        const indicator = document.querySelector('#posture-status .indicator');
-        const panel = document.getElementById('posture-status');
-
-        if (indicator) {
-            indicator.classList.remove('good', 'poor', 'leaning_forward', 'not_sitting');
-            indicator.classList.add(status);
-            indicator.textContent = statusText;
-            console.log('[Sensors] Updated main status indicator');
-        }
-    }
-}
+        });
+}*/
 
 
 

@@ -1,12 +1,21 @@
-
+// =====================
 // Connects to the server and listens for incoming data.
 // As soon as new chair data arrives,
 // it updates the website visualization in real time.
+// =====================
+
+
+/**
+ * Initializes the chair data listener.
+ *
+ * parameters: socket (the active socket.io connection)
+ * return: void
+ */
 function initChair(socket) {
 
     // Listen for incoming chair data from the server
     socket.on('chairData', (data) => {
-        console.log('Received chair data:', data);
+        console.log('Received chair data:', data); // Debug
 
         // Update the sensor display and posture indicator on the page
         updateChairVisualization(data.sensors);
@@ -14,7 +23,13 @@ function initChair(socket) {
     });
 }
 
-// Updates sensor display with color, size, and value based on pressure data
+
+/**
+ * Updates the chair sensor display based on pressure values.
+ *
+ * parameters: sensors (array containing pressure values from each sensor)
+ * return: void
+ */
 function updateChairVisualization(sensors) {
 
     // Validate input: make sure sensors is a non-empty array
@@ -50,10 +65,17 @@ function updateChairVisualization(sensors) {
     });
 }
 
-// Update the posture status display based on current status
+
+/**
+ * Updates the posture status element with text and visual feedback.
+ *
+ * parameters: status (a string representing the current posture)
+ * return: void
+ */
 function updatePostureStatus(status) {
     const statusElement = document.getElementById('posture-status').querySelector('.indicator');
     if (!statusElement) return;
     statusElement.innerHTML = status;
     updatePostureClass(statusElement, status);
 }
+
