@@ -8,7 +8,7 @@ let selectedChairId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Socket.IO
-    const socket = io('http://172.20.10.2:3000');
+    //const socket = io('http://172.20.10.2:3000');
 
     // Set up Socket.IO event listeners
     socket.on('connect', () => {
@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initChair(socket);
     initPoseNet(socket);
     initHistory();
+
 
     // Set current date in the date filters
     setupDateFilters();
@@ -60,33 +61,47 @@ function loadChairIds() {
 document.addEventListener('DOMContentLoaded', () => {
   loadChairIds(); // carica gli ID al caricamento
 
-  const connectBtn = document.getElementById('connect-btn');
-  connectBtn.addEventListener('click', () => {
-    const select = document.getElementById('chair-select');
-    selectedChairId = select.value;
+    const connectBtn = document.getElementById('connect-btn');
+    connectBtn.addEventListener('click', () => {
+        const select = document.getElementById('chair-select');
+        selectedChairId = select.value;
 
-    if (!selectedChairId) {
-      alert('Please select a chair!');
-      return;
-    }
+        if (!selectedChairId) {
+            alert('Please select a chair!');
+            return;
+        }
 
-    // Avvia connessione socket
-    socket = io(CONFIG.SERVER.URL); // usa la stessa origine
+        // Avvia connessione
+        socket = io(CONFIG.SERVER.URL);
 
-    initPoseNet(socket);
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            document.getElementById('connection-status').textContent = `Connected to ${selectedChairId}`;
+        });
 
-    document.getElementById('connection-status').textContent = `Connected to ${selectedChairId}`;
+        // Inizializzazioni DOPO connessione
+        initPoseNet(socket);
+        initHistory();
+        setupDateFilters();
 
-    // Listener per dati da ESP32
-    socket.on('chairData', (data) => {
-      if (data.chairId !== selectedChairId) return;
-      console.log('Sensor data received:', data);
-      // Chiama funzione per aggiornare la visualizzazione (es. pressione)
-      updateChairData(data);
+        socket.on('chairData', (data) => {
+            if (data.chairId !== selectedChairId) return;
+            updateChairData(data);
+        });
+
+        socket.on('postureUpdate', (data) => {
+            if (data.chairId !== selectedChairId) return;
+            updatePostureStatus(data.postureStatus, data.source === 'posenet' ? 'posenet' : 'sensors');
+        });
     });
+
+
+});
+
 
     // Listener per feedback da PoseNetsocket.on('postureUpdate', (data) => {
       socket.on('postureUpdate', (data) => {
+          //loadHistoryData();
           if (data.chairId !== selectedChairId) return;
 
           if (data.source === 'posenet') {
@@ -98,8 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       });
 
-  });
-});
 
 
 
@@ -120,9 +133,7 @@ function setupDateFilters() {
     document.getElementById('filter-btn').addEventListener('click', () => {
         loadHistoryData();
     });
-
-    // Initial load of history data
-    loadHistoryData();
+    
 }
 
 // Loads history data based on selected date range
