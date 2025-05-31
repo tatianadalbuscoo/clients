@@ -1,9 +1,10 @@
 /**
  * @jest-environment jsdom
- * 
+ *
  */
 
 
+// Import the relevant functions
 const { updateChairVisualization, updatePostureStatus } = require('../chairFrontend/js/chair.js');
 
 

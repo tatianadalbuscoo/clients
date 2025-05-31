@@ -2,6 +2,10 @@
 // Main application script
 // =====================
 
+
+// Import functions responsible for updating the chair's visualization and posture status display
+const { updateChairVisualization, updatePostureStatus } = require('./chair');
+
 // Selected chair ID
 let selectedChairId = null;
 
@@ -61,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Listen for posture updates (from PoseNet or sensors)
         socket.on('postureUpdate', (data) => {
             if (data.chairId !== selectedChairId) return;
-            updatePostureStatus(data.postureStatus, data.source === 'posenet' ? 'posenet' : 'sensors');
+            updatePostureFeedback(data.postureStatus, data.source === 'posenet' ? 'posenet' : 'sensors');
         });
     });
 });
@@ -137,7 +141,7 @@ function updateChairData(data) {
 
     // If posture data is present and NOT from PoseNet, update posture status
     if (data.source !== 'posenet' && data.postureStatus) {
-        updatePostureStatus(data.postureStatus, 'sensors');
+        updatePostureFeedback(data.postureStatus, 'sensors');
     }
 
     // Update the status area with a timestamp of the last update
@@ -154,7 +158,7 @@ function updateChairData(data) {
  * parameters: status (string), source (string: 'sensors' or 'posenet', default = 'sensors')
  * return: void
  */
-function updatePostureStatus(status, source = 'sensors') {
+function updatePostureFeedback(status, source = 'sensors') {
 
     // Default messages in case the posture is unrecognized
     let statusText = 'Unknown';
@@ -209,6 +213,12 @@ function updatePostureStatus(status, source = 'sensors') {
     }
 }
 
+
+// Export functions so they can be tested
+module.exports = {
+    updatePostureFeedback,
+    updateChairData
+};
 
 
 // Set default date filters to last 7 days and load history data
