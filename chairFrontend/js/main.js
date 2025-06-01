@@ -167,6 +167,10 @@ function updatePostureFeedback(status, source = 'sensors') {
             statusText = 'Not Sitting';
             adviceText = 'No sitting posture detected. Make sure you’re seated and visible to the camera.';
             break;
+        case 'lean_forwarding':
+            statusText = 'Leaning Forward';
+            adviceText = 'You seem to be leaning forward. Try to sit back and let your spine rest against the chair.';
+            break;
     }
 
     if (source === 'posenet') {
