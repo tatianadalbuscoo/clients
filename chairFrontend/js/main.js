@@ -203,11 +203,14 @@ function updatePostureFeedback(status, source = 'sensors') {
 
 // Export functions for Jest
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    const { updateChairVisualization } = require('./chair.js');
+    global.updateChairVisualization = updateChairVisualization;
     module.exports = {
         updatePostureFeedback,
         updateChairData
     };
 }
+
 
 // Attach to window for browser usage (e.g. from other scripts)
 if (typeof window !== 'undefined') {

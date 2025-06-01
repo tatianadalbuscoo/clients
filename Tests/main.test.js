@@ -2,14 +2,6 @@
  * @jest-environment jsdom
  */
 
-
-// Import functions under test
-const {
-    updatePostureFeedback,
-    updateChairData
-} = require('../chairFrontend/js/main.js');
-
-
 // Mock dependencies from the 'chair' module
 jest.mock('../chairFrontend/js/chair', () => ({
     updateChairVisualization: jest.fn(),
@@ -22,10 +14,11 @@ jest.mock('../chairFrontend/js/chair', () => ({
 
 describe('updateChairData', () => {
     let main;
+    let updateChairData;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="connection-status"></div>';
         jest.resetModules();
+        document.body.innerHTML = '<div id="connection-status"></div>';
 
         // Override main.js temporarily to mock updatePostureFeedback
         jest.doMock('../chairFrontend/js/main.js', () => {
@@ -36,11 +29,11 @@ describe('updateChairData', () => {
             };
         });
 
-        main = require('../chairFrontend/js/main.js'); // Reimport with mock
+        main = require('../chairFrontend/js/main.js');
+        updateChairData = main.updateChairData;
     });
 
     afterEach(() => {
-        jest.resetModules();
         jest.dontMock('../chairFrontend/js/main.js'); // Remove the mock
     });
 
@@ -58,7 +51,7 @@ describe('updateChairData', () => {
             source: 'sensors'
         };
 
-        main.updateChairData(data);
+        updateChairData(data);
         const text = document.getElementById('connection-status').textContent;
 
         expect(require('../chairFrontend/js/chair').updateChairVisualization).toHaveBeenCalled();
@@ -73,30 +66,26 @@ describe('updateChairData', () => {
             source: 'posenet'
         };
 
-        main.updateChairData(data);
+        updateChairData(data);
 
         expect(require('../chairFrontend/js/chair').updateChairVisualization).toHaveBeenCalled();
         expect(main.updatePostureFeedback).not.toHaveBeenCalled();
     });
 });
 
-
 // ------------------------------- updatePostureFeedback
 
-
 describe('updatePostureFeedback', () => {
+    const { updatePostureFeedback } = require('../chairFrontend/js/main.js');
 
     // Test: Should update PoseNet feedback panel with correct text and class
     test('updates PoseNet feedback panel for good posture', () => {
-
-        // Set up DOM structure expected by the updatePostureFeedback function
         document.body.innerHTML = `
-        <div id="feedback-status"></div>
-        <div id="feedback-description"></div>
-        <div id="posture-feedback" class=""></div>
-    `;
+            <div id="feedback-status"></div>
+            <div id="feedback-description"></div>
+            <div id="posture-feedback" class=""></div>
+        `;
 
-        // Call the function with 'good' posture and source as 'posenet'
         updatePostureFeedback('good', 'posenet');
 
         expect(document.getElementById('feedback-status').textContent).toBe('Good Posture');
@@ -140,7 +129,7 @@ describe('updatePostureFeedback', () => {
         expect(() => updatePostureFeedback('good', 'sensors')).not.toThrow();
     });
 
-    // Test: Should not throw if posenet feedback elements are missing
+    // Test: Should not throw if posenet elements are missing
     test('does nothing if posenet elements are missing', () => {
         document.body.innerHTML = ``;
 

@@ -147,7 +147,7 @@ describe('toggleCamera - camera status and data validation', () => {
     });
 
     // Test: Toggles camera activation and updates button label
-    test('toggles camera and updates button label', async () => {
+   test('toggles camera and updates button label', async () => {
         const video = document.getElementById('video');
 
         // Mock implementation of toggleCamera (simplified for unit testing)
