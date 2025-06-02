@@ -2,12 +2,7 @@
 #include <time.h>
 #include <HTTPClient.h>
 
-// Hotspot
-const char* ssidHotspot = "iPhone";
-const char* passwordHotspot = "tatianaa";
-
-// Ip address of the server
-String serverIP = "172.20.10.2";
+#include "config.h"
 
 // Analog pins of the 4 pressure sensors
 const int fsrPinA0 = A0;  
@@ -20,12 +15,6 @@ int fsrPinA0Value = 0;
 int fsrPinA3Value = 0;
 int fsrPinA4Value = 0;
 int fsrPinA5Value = 0;
-
-// Chair identifier
-const String IDchair = "CHAR01"; 
-
-// It is calculated on the server
-String posture = "unknown";
 
 String date_time = "";
 unsigned long lastRead = 0;
@@ -116,7 +105,7 @@ String getDateTime() {
 }
 
 
-/*  Builds a JSON string with sensor values, timestamp, and posture that is unknown
+/*  Builds a JSON string with ID chair, sensor values, timestamp and source of data
     parameters: none
     return: String containing the JSON data 
     */

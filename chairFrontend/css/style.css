@@ -1,4 +1,23 @@
-/* Base styles */
+/*
+------------------------------------------------------------
+  Stylesheet for Posture Monitoring Dashboard Interface
+  ---------------------------------------------------------
+  This CSS file defines the visual layout and styling for:
+  - General layout and typography
+  - Header and user profile display
+  - Dashboard section with posture status and indicators
+  - Chair pressure sensor visualization
+  - Video feed container (for PoseNet or webcam)
+  - History section with date filters and data table
+  - Buttons and input styling
+  - Responsive layout for different screen sizes
+  - Visual feedback boxes for posture status
+
+  Color scheme: warm earth tones (beige, cream, terracotta)
+  Font: EB Garamond (serif)
+------------------------------------------------------------
+*/
+
 :root {
     --beige: #e8e3d3;
     --dark-brown: #5d4037;
@@ -256,7 +275,6 @@ tr:hover {
     background-color: #f5f5f5;
 }
 
-/* Footer */
 footer {
     text-align: center;
     padding: 1.5rem;

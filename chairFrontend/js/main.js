@@ -12,13 +12,12 @@ let selectedChairId = null;
  *
  * - Loads available chair IDs.
  * - Handles WebSocket connection when the "connect" button is clicked.
- * - Starts PoseNet and listens for real-time updates based on the selected chair.
+ * - Initialize PoseNet and listens for real-time updates based on the selected chair.
  */
 document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch chair IDs from the server and populate the dropdown
     loadChairIds();
-    //setupDateFilters();
 
     // Event listener for the "Connect" button
     const connectBtn = document.getElementById('connect-btn');
@@ -51,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Initialize PoseNet
         initPoseNet(socket);
-        //initHistory();
 
         // Listen for sensor data
         socket.on('chairData', (data) => {
@@ -83,11 +81,11 @@ function loadChairIds() {
     // Construct the API URL for fetching chair IDs
     let s = `${CONFIG.SERVER.URL}/api/chairids`;
 
-    // Fetch chair IDs from the server
+    // Fetch chair IDs from the server (Get request)
     fetch(`${CONFIG.SERVER.URL}/api/chairids`)
         .then(res => res.json())
         .then(data => {
-            console.log('Received chair IDs:', data);
+            console.log('Received chair IDs:', data); // Debug
 
             const select = document.getElementById('chair-select');
 
@@ -112,6 +110,7 @@ function loadChairIds() {
 
 /**
  * Updates the UI with new sensor and posture data received from the selected chair.
+ *
  * parameters: data (object containing sensor and posture information)
  * return: void
  */
@@ -215,71 +214,9 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     };
 }
 
-
 // Attach to window for browser usage (e.g. from other scripts)
 if (typeof window !== 'undefined') {
     window.updatePostureFeedback = updatePostureFeedback;
     window.updateChairData = updateChairData;
 }
-
-
-// Set default date filters to last 7 days and load history data
-/*function setupDateFilters() {
-    const today = new Date();
-    const fromDate = new Date();
-
-    // Set "from" date to 7 days ago
-    fromDate.setDate(today.getDate() - 7);
-
-    // Populate the date inputs with the default values
-    document.getElementById('from-date').valueAsDate = fromDate;
-    document.getElementById('to-date').valueAsDate = today;
-
-    // Add event listener to filter button
-    document.getElementById('filter-btn').addEventListener('click', () => {
-        loadHistoryData();
-    });
-
-}*/
-
-// Loads history data based on selected date range
-/*function loadHistoryData() {
-    const fromDate = document.getElementById('from-date').value;
-    const toDate = document.getElementById('to-date').value;
-
-    // Fetch data for the selected chair and date range
-    //fetchHistory(selectedChairId || 'CHAIR01', fromDate, toDate);
-
-}*/
-
-/*
-// Fetches posture history data from the server and updates the chart/table
-function fetchHistory(chairId, from, to) {
-    const url = `${CONFIG.SERVER.URL}/api/history/${chairId}?from=${from}&to=${to}`;
-
-    fetch(url)
-        .then(response => {
-            console.log('Fetching history from:', url);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Fetched data:', data);
-
-            if (!Array.isArray(data) || data.length === 0) {
-                alert('No history data found for the selected period.');
-                return;
-            }
-
-            //updateHistoryTable(data);
-            //updateHistoryChart(data);
-        })
-        .catch(error => {
-            console.error('Error fetching history:', error);
-        });
-}*/
-
-
-
-
-
 

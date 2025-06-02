@@ -161,7 +161,7 @@ async function detectPose(video, canvas, ctx) {
         const poses = await poseNet.estimateMultiplePoses(video, {
             flipHorizontal: true,
             maxDetections: 1,
-            scoreThreshold: 0.4,
+            scoreThreshold: 0.6,
             nmsRadius: 20
         });
 

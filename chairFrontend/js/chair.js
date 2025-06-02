@@ -76,7 +76,6 @@ function updatePostureStatus(status) {
     const statusElement = document.getElementById('posture-status').querySelector('.indicator');
     if (!statusElement) return;
     statusElement.innerHTML = status;
-    updatePostureClass(statusElement, status);
 }
 
 
@@ -87,6 +86,7 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
         updatePostureStatus,
     };
 }
+
 
 // Attach functions to the window object for browser usage
 if (typeof window !== 'undefined') {
