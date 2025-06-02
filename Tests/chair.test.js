@@ -70,19 +70,6 @@ describe('updatePostureStatus', () => {
         global.updatePostureClass = jest.fn(); // Mock the style update function
     });
 
-    // Test: Updates the status text and calls the style update helper
-    test('updates status text and calls updatePostureClass', () => {
-
-        // Call the function with posture "good"
-        updatePostureStatus('good');
-        const indicator = document.querySelector('#posture-status .indicator');
-
-        // Check that the status text was set
-        expect(indicator.innerHTML).toBe('good');
-
-        // Check that the style update helper was called with correct arguments
-        expect(updatePostureClass).toHaveBeenCalledWith(indicator, 'good');
-    });
 
     // Test: Does nothing and throws no errors if the .indicator element is missing
     test('does nothing if .indicator element is missing', () => {

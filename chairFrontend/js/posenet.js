@@ -7,7 +7,6 @@ let poseNet;                        // PoseNet model instance
 let pose;                           // Current detected pose
 let isRunning = false;     // Indicates if the camera is currently active
 let videoStream = null;        // Webcam media stream
-let socket;                         // Socket connection to the server
 
 // Posture analysis tracking
 let lastPosture = null;             // Last posture that was detected and shown
@@ -17,14 +16,12 @@ const MIN_DURATION = 2500;       // Time (ms) a posture must persist before acce
 
 /**
  * Initializes PoseNet setup:
- * - Stores the socket connection
  * - Attaches event listener to the toggle camera button
  *
- * parameters: socketConnection
+ * parameters: none
  * return: void
  */
-function initPoseNet(socketConnection) {
-    socket = socketConnection;
+function initPoseNet() {
 
     const cameraButton = document.getElementById('toggle-camera');
     cameraButton.addEventListener('click', toggleCamera);
@@ -335,7 +332,7 @@ function sendPosnetDataToServer(pose) {
             })
         })
             .then(() => {
-                console.log("[CLIENT] Pose data sent to server");
+                console.log("[CLIENT] Pose data sent to server"); // Debug
             })
             .catch(error => {
                 console.error('[CLIENT] Error sending pose data:', error);
@@ -357,5 +354,4 @@ if (typeof window !== 'undefined') {
     window.stabilizePosture = stabilizePosture;
     window.sendPosnetDataToServer = sendPosnetDataToServer;
 }
-
 

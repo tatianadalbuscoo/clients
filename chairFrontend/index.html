@@ -1,9 +1,24 @@
+<!--
+  Sit Smarter, Live Better - HTML Interface
+  ----------------------------------------
+  This web page is the user interface for the "Smart chair" system, an application that analyzes a person's posture using:
+    - pressure sensors embedded in the chair
+    - the PoseNet model from TensorFlow.js for real-time visual analysis
+
+  Features:
+    Selection and connection of the smart chair
+    Real-time visualization of pressure sensors
+    Posture detection via webcam using PoseNet
+    Visual feedback and ergonomic advice
+    Responsive interface compatible with modern browsers -->
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Sit, Live Better</title>
+    <title>Sit Smarter, Live Better</title>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +29,7 @@
         <div class="profile">
             <div class="profile-img"></div>
             <div class="title-container">
-                <h1>Smart Sit, Live Better</h1>
+                <h1>Sit Smarter, Live Better</h1>
                 <p class="subtitle">From the way you sit ... to the way you feel !</p>
             </div>
         </div>
@@ -79,36 +94,6 @@
             </div>
 
         </section>
-
-        <!-- Historical posture data -->
-        <!--
-        <section class="history">
-            <h2>Posture History</h2>
-
-            <div class="date-filters">
-                <input type="date" id="from-date">
-                <input type="date" id="to-date">
-                <button id="filter-btn" class="btn">Filter</button>
-            </div>
-
-            <div class="history-container" id="history-container">
-                <canvas id="history-chart"></canvas>
-            </div>
-
-            <div class="history-table-container">
-                <table id="history-table">
-                    <thead>
-                        <tr>
-                            <th>Date/Time</th>
-                            <th>Posture Status</th>
-                            <th>Sensor Data</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-data">
-                    </tbody>
-                </table>
-            </div>
-        </section>-->
     </main>    <footer>
         <p>&copy; 2025 Carolina, Cecilia, Tatiana, Massimo | SUPSI</p>
     </footer>
@@ -135,4 +120,3 @@
     <script src="./js/main.js"></script>
 </body>
 </html>
-
